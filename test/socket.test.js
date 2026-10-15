@@ -77,6 +77,35 @@ for (const [name, path, suffix] of [
   });
 }
 
+test('an update that comes before the acknowledgement is not overwritten by it', async (t) => {
+  // This gateway sends the snapshot, then a newer update, then the acknowledgement with the older
+  // payment, all at once.
+  const http = createServer();
+  const io = new Server(http, { cors: { origin: '*' } });
+  io.on('connection', (socket) => {
+    socket.on('subscribe', (token, ack) => {
+      socket.emit('payment:update', { type: 'payment.snapshot', payment: pending });
+      socket.emit('payment:update', { type: 'payment.detecting', payment: { ...pending, status: 'detecting' } });
+      ack?.({ ok: true, payment: pending });
+    });
+  });
+  await new Promise((resolve) => http.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise((resolve) => io.close(() => resolve())));
+  const events = [];
+  const connection = [];
+  const adapter = payitgoCheckout({ baseUrl: `http://127.0.0.1:${http.address().port}`, createPayment });
+  const stop = adapter.subscribe('tok1', {
+    onPayment: (payment, type) => events.push({ type, status: payment.status }),
+    onConnection: (up) => connection.push(up),
+  });
+  t.after(stop);
+
+  await until(() => events.some((e) => e.type === 'payment.detecting'));
+  await new Promise((r) => setTimeout(r, 100));
+  assert.deepEqual(events.at(-1), { type: 'payment.detecting', status: 'detecting' });
+  assert.ok(connection.includes(true), 'live once acknowledged');
+});
+
 test('an unknown checkout token ends the subscription: no payment, no reconnect', async (t) => {
   const gw = await gateway('/socket.io/', {});
   t.after(gw.close);

@@ -135,20 +135,28 @@ export function payitgoCheckout(options: PayitgoCheckoutOptions): PayitgoAdapter
         socket.disconnect(); // the server ends the socket too: never reconnect for a bad token
         onNotFound?.(message.charAt(0).toUpperCase() + message.slice(1));
       };
+      // updates counts the payment:update events, so an acknowledgement can tell whether one came in
+      // after it was asked for
+      let updates = 0;
       // On every (re)connection: idempotent, and brings a fresh snapshot
       // Live only once the subscription is acknowledged: until then the widget keeps polling
       socket.on('connect', async () => {
+        const before = updates;
         try {
           const ack = (await socket.timeout(10_000).emitWithAck('subscribe', checkoutToken)) as SubscribeAck;
           if (over) return;
           if (ack.ok) {
             onConnection?.(true);
-            onPayment(ack.payment, 'payment.snapshot');
+            // The gateway sends the payment.snapshot event just before acknowledging, and an update can
+            // follow at once: any event since subscribing is at least as new as the acknowledgement's
+            // payment, which then must not overwrite it
+            if (updates === before) onPayment(ack.payment, 'payment.snapshot');
           } else notFound(ack.error);
         } catch { /* no acknowledgement in time: the payment.snapshot event, or polling, fills in */ }
       });
       socket.on('payment:update', (e: { type: string; payment?: PayitgoCheckoutState }) => {
         if (over || !e?.payment) return;
+        updates++;
         onConnection?.(true);
         onPayment(e.payment, e.type);
       });
