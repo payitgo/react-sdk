@@ -1,0 +1,66 @@
+{
+  "name": "@payitgo/react",
+  "version": "0.3.0",
+  "description": "Embeddable crypto checkout widget for React apps, for the payitgo payment gateway",
+  "license": "MIT",
+  "author": "payitgo (https://payitgo.co)",
+  "homepage": "https://payitgo.co",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/payitgo/react-sdk.git"
+  },
+  "keywords": [
+    "payitgo",
+    "crypto",
+    "payments",
+    "checkout",
+    "react",
+    "widget"
+  ],
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
+    "build": "npm run clean && tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "npm run build && node --test test/*.test.js",
+    "prepare": "npm run build"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0 || ^19.0.0",
+    "react-dom": "^18.0.0 || ^19.0.0"
+  },
+  "dependencies": {
+    "qrcode.react": "^4.2.0",
+    "socket.io-client": "^4.8.4"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "socket.io": "^4.8.4",
+    "typescript": "^6.0.3"
+  }
+}
