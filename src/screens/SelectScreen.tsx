@@ -9,6 +9,8 @@ import type { PayitgoCheckoutState, PayitgoPayment } from '../types.js';
 interface Props {
   payment: PayitgoPayment;
   state: PayitgoCheckoutState;
+  /** Changing the coin chosen before (state.token): "Back" returns to it */
+  changing?: boolean;
   selected: PayitgoTokenId | '';
   onSelect: (id: PayitgoTokenId) => void;
   onCancel: () => void;
@@ -21,7 +23,7 @@ interface Props {
 }
 
 /** Order header plus the payment's token_options. Paying posts the chosen coin. */
-export function SelectScreen({ payment, state, selected, onSelect, onCancel, onPay, busy, error, remainingMs, titleId }: Props) {
+export function SelectScreen({ payment, state, changing, selected, onSelect, onCancel, onPay, busy, error, remainingMs, titleId }: Props) {
   const optionRefs = useRef<(HTMLButtonElement | null)[]>([]);
   // Cheapest network first when the fees are passed on (each option then has its own amount_due_usd)
   const options = sortOptions(state.token_options);
@@ -32,6 +34,7 @@ export function SelectScreen({ payment, state, selected, onSelect, onCancel, onP
   // Fees passed on: until a coin is chosen the top-level amount_due_usd is only the price
   const perCoin = !!state.fees_paid_by_customer;
   const timeUp = remainingMs <= 0;
+  const keeping = changing && selected === state.token;
 
   // Radio-group keyboard support: arrows move the selection and focus
   const onKeyDown = (e: React.KeyboardEvent) => {
@@ -109,15 +112,17 @@ export function SelectScreen({ payment, state, selected, onSelect, onCancel, onP
 
       {current ? (
         <p className="payitgo-note">
-          You will pay in {coinFor(current.token).symbol} on {current.network || coinFor(current.token).network || CHAIN_NAMES[current.chain]}. The coin can be chosen once; the price is then locked for 15 minutes.
+          {keeping
+            ? `You keep paying in ${coinFor(current.token).symbol}, at the same address.`
+            : `You will pay in ${coinFor(current.token).symbol} on ${current.network || coinFor(current.token).network || CHAIN_NAMES[current.chain]}${changing ? ' instead, at a new address' : ''}. The price is then locked for 15 minutes.`}
         </p>
       ) : null}
       {error && <p className="payitgo-error" role="alert">{error}</p>}
 
       <div className="payitgo-footer">
-        <button type="button" className="payitgo-btn payitgo-btn-secondary" onClick={onCancel}>Not now</button>
+        <button type="button" className="payitgo-btn payitgo-btn-secondary" onClick={onCancel}>{changing ? 'Back' : 'Not now'}</button>
         <button type="button" className="payitgo-btn payitgo-btn-primary" onClick={onPay} disabled={busy || !options.length}>
-          {busy ? 'Preparing…' : `Pay ${formatUsd(due)}`}
+          {busy ? 'Preparing…' : keeping ? 'Keep this coin' : `Pay ${formatUsd(due)}`}
         </button>
       </div>
     </>

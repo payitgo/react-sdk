@@ -15,13 +15,17 @@ export const networkOf = (s: PayitgoCheckoutState) => s.network || coinFor(s.tok
 interface Props {
   state: PayitgoCheckoutState;
   remainingMs: number;
+  /** Reopens the coin picker; absent once the coin can no longer change */
+  onChangeCoin?: () => void;
+  /** Why a change of coin did not happen */
+  notice?: string;
   /** Demo adapter only */
   onSimulate?: () => void;
   titleId: string;
 }
 
 /** pending / partially_paid: exact amount and network, QR code, address, XRP tag, countdown */
-export function PayScreen({ state, remainingMs, onSimulate, titleId }: Props) {
+export function PayScreen({ state, remainingMs, onChangeCoin, notice, onSimulate, titleId }: Props) {
   const coin = coinFor(state.token);
   const network = networkOf(state);
   const partial = state.status === 'partially_paid' && isPositive(state.received_amount);
@@ -50,6 +54,7 @@ export function PayScreen({ state, remainingMs, onSimulate, titleId }: Props) {
       {timeUp && (
         <p className="payitgo-note" role="status">The time to pay has run out. We are checking with the network: this updates in a moment. If you already sent the payment, keep this open.</p>
       )}
+      {notice && <p className="payitgo-note" role="status">{notice}</p>}
 
       <div className="payitgo-pay">
         {state.qr_payload && (
@@ -90,6 +95,9 @@ export function PayScreen({ state, remainingMs, onSimulate, titleId }: Props) {
 
       <div className="payitgo-footer" style={{ alignItems: 'center' }}>
         <span className="payitgo-muted" style={{ fontSize: 12, marginRight: 'auto' }} aria-live="polite">Waiting for your payment…</span>
+        {onChangeCoin && (
+          <button type="button" className="payitgo-btn payitgo-btn-secondary" onClick={onChangeCoin}>Change coin</button>
+        )}
         {onSimulate && (
           <button type="button" className="payitgo-btn payitgo-btn-primary" disabled={simulated} onClick={() => { setSimulated(true); onSimulate(); }}>
             {simulated ? 'Sending…' : 'Simulate payment'}

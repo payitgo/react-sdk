@@ -5,5 +5,5 @@ export { demoAdapter } from './demoAdapter.js';
 export { COINS, CHAIN_NAMES, coinFor, type PayitgoCoin, type PayitgoTokenId, type PayitgoChain } from './coins.js';
 export type {
   PayitgoPayment, PayitgoTheme, PayitgoAdapter, PayitgoCheckoutState, PayitgoTokenOption, PayitgoStatus, PayitgoResult,
-  PayitgoSimulateOutcome, PayitgoSimulation, PayitgoDeposit, PayitgoSubscription,
+  PayitgoSimulateOutcome, PayitgoSimulation, PayitgoDeposit, PayitgoPreviousCoin, PayitgoSubscription,
 } from './types.js';
