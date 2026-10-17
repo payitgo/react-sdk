@@ -1,6 +1,6 @@
 {
   "name": "@payitgo/react",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "Embeddable crypto checkout widget for React apps, for the payitgo payment gateway",
   "license": "MIT",
   "author": "payitgo (https://payitgo.co)",
