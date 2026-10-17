@@ -85,6 +85,10 @@ function CheckoutDialog({ onClose, payment, theme, adapter = demoAdapter, onSucc
   const [selected, setSelected] = useState<PayitgoTokenId | ''>('');
   const [choosing, setChoosing] = useState(false);
   const [chooseError, setChooseError] = useState('');
+  // The customer reopened the coin picker to change the coin they chose
+  const [changing, setChanging] = useState(false);
+  // Shown on the pay screen: why a change did not happen
+  const [notice, setNotice] = useState('');
   const [now, setNow] = useState(0);
   const [run, setRun] = useState(0);
   // Subscribed on the adapter's live connection: no polling meanwhile
@@ -198,6 +202,8 @@ function CheckoutDialog({ onClose, payment, theme, adapter = demoAdapter, onSucc
     setState(null);
     setStartError('');
     setChooseError('');
+    setChanging(false);
+    setNotice('');
     setNotFound(false);
     setChoiceClosed(false);
     setLive(false);
@@ -206,17 +212,22 @@ function CheckoutDialog({ onClose, payment, theme, adapter = demoAdapter, onSucc
 
   const choose = async () => {
     if (!checkoutToken || !selected) { setChooseError('Choose a coin to continue.'); return; }
+    // Keeping the coin it has: nothing to change
+    if (changing && selected === state?.token) { setChanging(false); return; }
     setChoosing(true);
     setChooseError('');
     try {
       const s = await adapter.chooseToken(checkoutToken, selected);
       setState(s);
       setNow(Date.now());
+      // A change refused (a payment arrived meanwhile): the payment as it is
+      if (changing && s.token !== selected) setNotice('The coin can no longer be changed for this payment.');
+      setChanging(false);
     } catch (e) {
       const status = statusOf(e);
       const message = messageOf(e);
       if (status === 404) setNotFound(true);
-      else if (status === 400 && /no longer be paid/i.test(message)) setChoiceClosed(true);
+      else if (status === 400 && /no longer be paid/i.test(message)) { setChoiceClosed(true); setChanging(false); }
       else if (status === 400 && /not one of this payment's options/i.test(message)) {
         // The options changed: reload the payment and let the customer choose again
         try {
@@ -249,6 +260,8 @@ function CheckoutDialog({ onClose, payment, theme, adapter = demoAdapter, onSucc
 
   const remainingMs = state ? new Date(state.expires_at).getTime() - now : 0;
   const isDemo = !!adapter.simulatePayment;
+  // payitgo offers the coins again exactly while the chosen one can still change
+  const canChange = state?.status === 'pending' && !!state.token && !!state.token_options?.length;
 
   let body: React.ReactNode;
   if (notFound) {
@@ -259,14 +272,15 @@ function CheckoutDialog({ onClose, payment, theme, adapter = demoAdapter, onSucc
     body = <LoadingScreen payment={payment} titleId={titleId} />;
   } else if (choiceClosed && state.status === 'pending' && !state.token) {
     body = <ExpiredScreen state={state} onRestart={restart} onClose={onClose} returnLinks={returnLinks} titleId={titleId} />;
-  } else if ((state.status === 'pending' || state.status === 'partially_paid') && !state.token) {
+  } else if ((state.status === 'pending' || state.status === 'partially_paid') && (!state.token || (changing && canChange))) {
     body = (
       <SelectScreen
         payment={payment}
         state={state}
+        changing={!!state.token}
         selected={selected}
         onSelect={(t) => { setSelected(t); setChooseError(''); }}
-        onCancel={onClose}
+        onCancel={state.token ? () => { setChanging(false); setChooseError(''); } : onClose}
         onPay={choose}
         busy={choosing}
         error={chooseError}
@@ -279,6 +293,8 @@ function CheckoutDialog({ onClose, payment, theme, adapter = demoAdapter, onSucc
       <PayScreen
         state={state}
         remainingMs={remainingMs}
+        onChangeCoin={canChange ? () => { setSelected(state.token); setChooseError(''); setNotice(''); setChanging(true); } : undefined}
+        notice={notice}
         onSimulate={adapter.simulatePayment ? () => adapter.simulatePayment?.(checkoutToken) : undefined}
         titleId={titleId}
       />

@@ -71,6 +71,18 @@ export interface PayitgoDeposit {
   late?: boolean;
   /** A test payment's deposit: its tx_id looks like a hash but is on no chain. Tell it by this flag, never by the tx_id */
   simulated?: boolean;
+  /** The address it was sent to: the payment's, or a previous coin's */
+  to?: string;
+}
+
+/** A coin chosen for the payment before its current one (the customer changed it). Its address is still watched */
+export interface PayitgoPreviousCoin {
+  token: PayitgoTokenId;
+  chain: PayitgoChain;
+  deposit_address: string;
+  destination_tag?: number;
+  crypto_amount: string;
+  rate_locked: string;
 }
 
 /**
@@ -85,7 +97,10 @@ export interface PayitgoCheckoutState {
   /** "" until the coin is chosen */
   token: PayitgoTokenId | '';
   chain: PayitgoChain | '';
+  /** The coins to choose from: while `token` is "", and while the chosen coin can still be changed */
   token_options?: PayitgoTokenOption[];
+  /** The coins chosen before `token`, when the customer changed it */
+  previous_coins?: PayitgoPreviousCoin[];
   network?: string;
   token_name?: string;
   deposit_address: string;
@@ -139,7 +154,10 @@ export interface PayitgoAdapter {
   start(payment: PayitgoPayment): Promise<string>;
   /** Reads the payer's view of the payment. */
   get(checkoutToken: string): Promise<PayitgoCheckoutState>;
-  /** Sets the coin of a payment created without one (once). */
+  /**
+   * Sets the coin of a payment created without one, or changes it while the payment has `token_options`.
+   * A change refused (something arrived meanwhile) answers the payment as it is.
+   */
   chooseToken(checkoutToken: string, token: PayitgoTokenId): Promise<PayitgoCheckoutState>;
   /**
    * How often the widget re-reads the payment with `get()`, in ms (default 4000). With `subscribe`, only while

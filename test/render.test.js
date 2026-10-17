@@ -86,6 +86,24 @@ test('with the fees passed on, the coins are listed cheapest first, each at its 
   assert.equal(buttons(html)['Pay $40.34'], true);
 });
 
+test('a chosen coin offers "Change coin" exactly while payitgo still offers the coins', () => {
+  const changeable = { ...usdt, token_options: choosing.token_options };
+  assert.match(render(PayScreen, { state: changeable, remainingMs: 600_000, onChangeCoin() {}, titleId: 't' }), />Change coin</);
+  assert.doesNotMatch(render(PayScreen, { state: usdt, remainingMs: 600_000, titleId: 't' }), /Change coin/);
+  const refused = render(PayScreen, { state: usdt, remainingMs: 600_000, notice: 'The coin can no longer be changed for this payment.', titleId: 't' });
+  assert.match(refused, /can no longer be changed/);
+
+  // The picker again: back to the coin chosen, and keeping it changes nothing
+  const picker = (selected) => render(SelectScreen, {
+    payment: { title: 'Order #42', amount: { value: 40, currency: 'USD' } }, state: { ...changeable, fees_paid_by_customer: true },
+    changing: true, selected, onSelect() {}, onCancel() {}, onPay() {}, busy: false, error: '', remainingMs: 600_000, titleId: 't',
+  });
+  assert.equal(buttons(picker('USDT_TRC20'))['Back'], true);
+  assert.equal(buttons(picker('USDT_TRC20'))['Keep this coin'], true);
+  assert.match(picker('BTC'), /instead, at a new address/);
+  assert.equal(buttons(picker('BTC'))['Pay $40.54'], true);
+});
+
 test('the simulate buttons: never on a live payment, only "Let it expire" before the coin, no other coin on Bitcoin', () => {
   const props = (state) => ({ state, simulate: async () => state, onState() {}, onReload() {} });
   assert.equal(render(SimulatePanel, props({ ...usdt, livemode: true })), '');

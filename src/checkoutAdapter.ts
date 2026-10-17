@@ -113,7 +113,7 @@ export function payitgoCheckout(options: PayitgoCheckoutOptions): PayitgoAdapter
       try {
         return await post(`/checkout/${encodeURIComponent(checkoutToken)}/token`, { token });
       } catch (e) {
-        // Already chosen (another tab, or a retried click): carry on with the payment as it is
+        // The coin can no longer change (paid meanwhile, another tab, a retried click): carry on with the payment as it is
         if (e instanceof PayitgoError && e.status === 409) return call<PayitgoCheckoutState>(`/checkout/${encodeURIComponent(checkoutToken)}`);
         throw e;
       }

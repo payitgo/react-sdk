@@ -13,6 +13,8 @@ const FEES: Partial<Record<PayitgoTokenId, string>> = { USDT_TRC20: '3.22', ETH:
 
 const CHOOSE_MS = 60 * 60 * 1000;
 const PAY_MS = 15 * 60 * 1000;
+/** How many times the coin can be changed, as payitgo allows */
+const MAX_CHANGES = 3;
 
 interface DemoSession {
   state: PayitgoCheckoutState;
@@ -55,6 +57,8 @@ function advance(s: DemoSession): PayitgoCheckoutState {
       const confirmations = Math.min(required, Math.floor((elapsed - 1500) / step));
       s.state = {
         ...st,
+        // Paid: the coin no longer changes
+        token_options: undefined,
         status: confirmations >= required ? 'confirmed' : 'detecting',
         received_amount: st.crypto_amount,
         confirmations,
@@ -62,7 +66,7 @@ function advance(s: DemoSession): PayitgoCheckoutState {
       };
     }
   } else if ((st.status === 'pending') && now > new Date(st.expires_at).getTime()) {
-    s.state = { ...st, status: 'expired' };
+    s.state = { ...st, status: 'expired', token_options: undefined };
   }
   return { ...s.state };
 }
@@ -115,16 +119,27 @@ export const demoAdapter: PayitgoAdapter = {
   async chooseToken(checkoutToken, token) {
     await delay(300);
     const s = session(checkoutToken);
-    if (s.state.token) return advance(s);
+    const st = advance(s);
+    // The coin it has, or one that can no longer change (paid, expired): the payment as it is
+    if (st.token === token || (st.token && !st.token_options)) return st;
     const coin = coinFor(token);
-    const amount = cryptoFor(token, Number(s.state.amount_due_usd));
-    const address = `DEMO-${coin.chain.toUpperCase()}-ADDRESS-DO-NOT-PAY`;
+    const usd = Number(st.usd_amount);
+    const amount = cryptoFor(token, usd);
+    const address = `DEMO-${coin.chain.toUpperCase()}-ADDRESS-${randomHex(6).toUpperCase()}-DO-NOT-PAY`;
     const tag = token === 'XRP' ? Math.floor(Math.random() * 90000) + 10000 : undefined;
+    const previous = st.token
+      ? [...(st.previous_coins ?? []), {
+        token: st.token, chain: coinFor(st.token).chain, deposit_address: st.deposit_address,
+        destination_tag: st.destination_tag, crypto_amount: st.crypto_amount, rate_locked: String(RATES[st.token]),
+      }]
+      : undefined;
     s.state = {
-      ...s.state,
+      ...st,
       token,
       chain: coin.chain,
-      token_options: undefined,
+      // The coin can still change, a few times
+      token_options: (previous?.length ?? 0) < MAX_CHANGES ? options(usd) : undefined,
+      previous_coins: previous,
       network: `${coin.network} (demo)`,
       token_name: coin.name,
       deposit_address: address,

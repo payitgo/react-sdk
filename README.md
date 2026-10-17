@@ -93,7 +93,9 @@ const adapter = payitgoCheckout({
    `fee_note`; when you pass the fees on, each with its own `amount_due_usd`, cheapest first) and posts the
    customer's choice to `POST {baseUrl}/checkout/{checkout_token}/token`. If that coin is no longer offered,
    it reloads the payment and asks again; if the time to choose has passed ("this payment can no longer be
-   paid"), it shows the expired view.
+   paid"), it shows the expired view. While the chosen coin can still change (the payment still has
+   `token_options`: nothing has arrived, three changes at most), the pay screen has a **Change coin** button
+   that reopens the list; another coin gets a new address, amount and 15 minutes.
 3. It shows the exact amount and network, the QR code (`qr_payload`: the address only, so the amount and
    any XRP destination tag are shown as text to copy), the address, the XRP destination tag (marked
    required) and a countdown to `expires_at`. At zero it shows "Time is up, checking…" and waits for the

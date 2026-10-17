@@ -48,7 +48,7 @@ test('a gateway behind a path keeps the path', async () => {
 test('chooseToken posts the coin; a coin chosen already reads the payment instead', async () => {
   const gw = fakeGateway(
     { body: { id: 'p1', token: 'USDT_BEP20' } },
-    { status: 409, body: { error: 'the coin for this payment has already been chosen' } },
+    { status: 409, body: { error: 'the coin for this payment can no longer be changed' } },
     { body: { id: 'p1', token: 'TRX' } },
   );
   const adapter = payitgoCheckout({ baseUrl: 'https://gw.example', createPayment, fetch: gw.fetch });
@@ -121,4 +121,21 @@ test('start returns the checkout token createPayment resolves to, and refuses an
 
   const bad = payitgoCheckout({ createPayment: async () => ({ checkout_token: 'b28d4f61e9a03c75d2e8f1a6' }) });
   await assert.rejects(bad.start(payment), /checkout_token/);
+});
+
+test('the demo adapter changes the coin as payitgo does: a new address, the old one kept, until paid', async () => {
+  const { demoAdapter } = await import('@payitgo/react');
+  const cs = await demoAdapter.start({ title: 'Demo', amount: { value: 25, currency: 'USD' } });
+  const first = await demoAdapter.chooseToken(cs, 'USDT_TRC20');
+  assert.ok(first.token_options?.length, 'the coin can still change');
+  assert.equal((await demoAdapter.chooseToken(cs, 'USDT_TRC20')).deposit_address, first.deposit_address);
+  const second = await demoAdapter.chooseToken(cs, 'BTC');
+  assert.equal(second.token, 'BTC');
+  assert.notEqual(second.deposit_address, first.deposit_address);
+  assert.deepEqual(second.previous_coins.map((c) => [c.token, c.deposit_address]), [['USDT_TRC20', first.deposit_address]]);
+  demoAdapter.simulatePayment(cs);
+  await new Promise((r) => setTimeout(r, 1700));
+  const paid = await demoAdapter.get(cs);
+  assert.equal(paid.token_options, undefined);
+  assert.equal((await demoAdapter.chooseToken(cs, 'TRX')).token, 'BTC', 'a paid coin no longer changes');
 });
