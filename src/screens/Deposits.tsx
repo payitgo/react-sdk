@@ -21,7 +21,7 @@ export function Deposits({ deposits, title = 'Transfers received' }: { deposits?
           return (
             <li key={`${d.tx_id}-${i}`}>
               <span style={{ minWidth: 0 }}>
-                <strong style={{ fontWeight: 600, wordBreak: 'break-all' }}>{d.amount} {coin.symbol}</strong>
+                <strong style={{ fontWeight: 600, wordBreak: 'break-all' }}>{d.amount} {d.ticker || coin.symbol}</strong>
                 <span className="payitgo-option-sub">
                   {d.explorer_url
                     ? <a className="payitgo-link" style={{ marginTop: 0 }} href={d.explorer_url} target="_blank" rel="noreferrer">{shortHash(d.tx_id)}</a>

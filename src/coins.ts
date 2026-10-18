@@ -1,10 +1,11 @@
-// The 12 coins payitgo supports, with what the widget needs to draw them. Live fees, minimums, amounts and
-// network names always come from the API (a payment's token_options and fields); this is display metadata only.
+// The 16 coins payitgo supports, with what the widget needs to draw them offline. Everything about a coin comes
+// from the API (a payment's token_options and fields), its ticker and icon_url included: this list is the
+// fallback for a payment without them, and what the demo draws.
 
 export type PayitgoTokenId =
   | 'USDT_TRC20' | 'TRX'
-  | 'ETH' | 'USDT_ERC20' | 'USDC_ERC20'
-  | 'BNB' | 'USDT_BEP20' | 'USDC_BEP20'
+  | 'ETH' | 'USDT_ERC20' | 'USDC_ERC20' | 'DAI_ERC20' | 'SHIB_ERC20' | 'PEPE_ERC20'
+  | 'BNB' | 'USDT_BEP20' | 'USDC_BEP20' | 'ETH_BEP20'
   | 'BTC' | 'LTC' | 'DOGE' | 'XRP';
 
 export type PayitgoChain = 'tron' | 'ethereum' | 'bsc' | 'bitcoin' | 'litecoin' | 'dogecoin' | 'xrp';
@@ -50,13 +51,17 @@ export const COINS: PayitgoCoin[] = [
   { id: 'ETH', symbol: 'ETH', name: 'Ethereum', chain: 'ethereum', network: CHAIN_NAMES.ethereum, color: '#627eea', glyph: 'Ξ', confirmations: 12 },
   { id: 'USDT_ERC20', symbol: 'USDT', name: 'Tether', chain: 'ethereum', network: TOKEN_NETWORK.ethereum, color: '#26a17b', glyph: '₮', chainBadge: ETHEREUM, confirmations: 12 },
   { id: 'USDC_ERC20', symbol: 'USDC', name: 'USD Coin', chain: 'ethereum', network: TOKEN_NETWORK.ethereum, color: '#2775ca', glyph: '$', chainBadge: ETHEREUM, confirmations: 12 },
+  { id: 'DAI_ERC20', symbol: 'DAI', name: 'Dai', chain: 'ethereum', network: TOKEN_NETWORK.ethereum, color: '#f5ac37', glyph: 'D', chainBadge: ETHEREUM, confirmations: 12 },
+  { id: 'SHIB_ERC20', symbol: 'SHIB', name: 'Shiba Inu', chain: 'ethereum', network: TOKEN_NETWORK.ethereum, color: '#e42d04', glyph: 'S', chainBadge: ETHEREUM, confirmations: 12 },
+  { id: 'PEPE_ERC20', symbol: 'PEPE', name: 'Pepe', chain: 'ethereum', network: TOKEN_NETWORK.ethereum, color: '#4c9540', glyph: 'P', chainBadge: ETHEREUM, confirmations: 12 },
   { id: 'BNB', symbol: 'BNB', name: 'BNB', chain: 'bsc', network: CHAIN_NAMES.bsc, color: '#f3ba2f', glyph: 'B', confirmations: 12 },
   { id: 'USDT_BEP20', symbol: 'USDT', name: 'Tether', chain: 'bsc', network: TOKEN_NETWORK.bsc, color: '#26a17b', glyph: '₮', chainBadge: BSC, confirmations: 12 },
   { id: 'USDC_BEP20', symbol: 'USDC', name: 'USD Coin', chain: 'bsc', network: TOKEN_NETWORK.bsc, color: '#2775ca', glyph: '$', chainBadge: BSC, confirmations: 12 },
+  { id: 'ETH_BEP20', symbol: 'ETH', name: 'Ethereum', chain: 'bsc', network: TOKEN_NETWORK.bsc, color: '#627eea', glyph: 'Ξ', chainBadge: BSC, confirmations: 12 },
   { id: 'BTC', symbol: 'BTC', name: 'Bitcoin', chain: 'bitcoin', network: CHAIN_NAMES.bitcoin, color: '#f7931a', glyph: '₿', confirmations: 3 },
   { id: 'LTC', symbol: 'LTC', name: 'Litecoin', chain: 'litecoin', network: CHAIN_NAMES.litecoin, color: '#345d9d', glyph: 'Ł', confirmations: 6 },
   { id: 'DOGE', symbol: 'DOGE', name: 'Dogecoin', chain: 'dogecoin', network: CHAIN_NAMES.dogecoin, color: '#c2a633', glyph: 'Ð', confirmations: 6 },
-  { id: 'XRP', symbol: 'XRP', name: 'XRP', chain: 'xrp', network: CHAIN_NAMES.xrp, color: '#23292f', glyph: '✕', confirmations: 1 },
+  { id: 'XRP', symbol: 'XRP', name: 'XRP', chain: 'xrp', network: CHAIN_NAMES.xrp, color: '#23292f', glyph: 'X', confirmations: 1 },
 ];
 
 const byId = new Map<string, PayitgoCoin>(COINS.map(c => [c.id, c]));
@@ -65,6 +70,9 @@ const byId = new Map<string, PayitgoCoin>(COINS.map(c => [c.id, c]));
 export function coinFor(id: string): PayitgoCoin {
   return byId.get(id) ?? { id: id as PayitgoTokenId, symbol: id.split('_')[0] || id, name: id, chain: 'ethereum', network: '', color: '#64748b', glyph: (id[0] ?? '?'), confirmations: 0 };
 }
+
+/** What people call the payment's coin: the API's `token_ticker`, else this list's */
+export const tickerOf = (s: { token: string; token_ticker?: string }) => s.token_ticker || coinFor(s.token).symbol;
 
 export const formatUsd = (v: number | string) => {
   const n = typeof v === 'number' ? v : parseFloat(v);

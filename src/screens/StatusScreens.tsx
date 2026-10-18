@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { coinFor, formatPrice, formatUsd, isPositive } from '../coins.js';
+import { coinFor, formatPrice, formatUsd, isPositive, tickerOf } from '../coins.js';
 import { CopyField } from '../CopyField.js';
 import { AlertIcon, CheckIcon, ClockIcon, SpinnerIcon } from '../icons.js';
 import type { PayitgoCheckoutState, PayitgoPayment } from '../types.js';
@@ -35,15 +35,15 @@ export function LoadingScreen({ payment, titleId }: { payment: PayitgoPayment; t
 
 /** detecting: enough arrived, waiting for confirmations. No countdown: the customer must not pay again */
 export function ConfirmingScreen({ state, titleId }: { state: PayitgoCheckoutState; titleId: string }) {
-  const coin = coinFor(state.token);
-  const required = state.confirmations_required || coin.confirmations;
+  const ticker = tickerOf(state);
+  const required = state.confirmations_required || coinFor(state.token).confirmations;
   const done = Math.min(state.confirmations ?? 0, required);
   return (
     <div aria-live="polite">
       <div className="payitgo-status">
         <span className="payitgo-status-icon"><SpinnerIcon /></span>
         <h2 id={titleId}>Payment received, confirming…</h2>
-        <p>Your {coin.symbol} arrived on {networkOf(state)}. The network is confirming it. Don&apos;t send it again.</p>
+        <p>Your {ticker} arrived on {networkOf(state)}. The network is confirming it. Don&apos;t send it again.</p>
       </div>
       {required > 0 && (
         <>
@@ -70,12 +70,12 @@ function ShopLink({ href, primary, children }: { href?: string; primary?: boolea
 }
 
 export function PaidScreen({ payment, state, onDone, returnLinks, titleId }: { payment: PayitgoPayment; state: PayitgoCheckoutState; onDone: () => void; returnLinks?: boolean; titleId: string }) {
-  const coin = coinFor(state.token);
+  const ticker = tickerOf(state);
   const paid = state.received_amount && state.received_amount !== '0' ? state.received_amount : state.crypto_amount;
   const price = formatPrice(state.price_amount, state.price_currency);
   const rows: [string, string][] = [
     ['For', payment.lineItem ?? payment.title],
-    ['Amount paid', `${paid} ${coin.symbol}`],
+    ['Amount paid', `${paid} ${ticker}`],
     // received_usd: the dollar value of what counts; amount_due_usd only as a fallback
     ['Value', formatUsd(isPositive(state.received_usd) ? state.received_usd! : state.amount_due_usd)],
     ...(price ? [['Price', price] as [string, string]] : []),
@@ -157,7 +157,7 @@ export function ExpiredScreen({ state, onRestart, onClose, returnLinks, titleId 
 }
 
 export function UnderpaidScreen({ state, onClose, returnLinks, titleId }: ClosedProps) {
-  const coin = coinFor(state.token);
+  const ticker = tickerOf(state);
   const cancel = returnLinks ? state.cancel_url : undefined;
   return (
     <div aria-live="polite">
@@ -165,7 +165,7 @@ export function UnderpaidScreen({ state, onClose, returnLinks, titleId }: Closed
         <span className="payitgo-status-icon payitgo-warn"><AlertIcon /></span>
         <h2 id={titleId}>Only part of the amount arrived</h2>
         <p>
-          Only {state.received_amount} of {state.crypto_amount} {coin.symbol} arrived before the deadline. Please contact the merchant
+          Only {state.received_amount} of {state.crypto_amount} {ticker} arrived before the deadline. Please contact the merchant
           (order {state.order_id}): they have received what you sent and can refund it or agree on the rest.
         </p>
         <p style={{ marginTop: 8, fontSize: 12 }}>

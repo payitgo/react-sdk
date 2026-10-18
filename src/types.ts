@@ -34,7 +34,11 @@ export interface PayitgoTokenOption {
   token: PayitgoTokenId;
   chain: PayitgoChain;
   name?: string;
+  /** What people call the coin: "USDT" */
+  ticker?: string;
   network?: string;
+  /** The coin's icon, an SVG image the gateway serves */
+  icon_url?: string;
   confirmations?: number;
   min_usd: string;
   network_fee_usd: string;
@@ -60,6 +64,9 @@ export interface PayitgoSimulation {
 export interface PayitgoDeposit {
   tx_id: string;
   token: string;
+  /** What people call `token`, and its icon */
+  ticker?: string;
+  icon_url?: string;
   amount: string;
   /** false: another coin than the payment asked for, which does not count */
   counted: boolean;
@@ -103,6 +110,10 @@ export interface PayitgoCheckoutState {
   previous_coins?: PayitgoPreviousCoin[];
   network?: string;
   token_name?: string;
+  /** What people call `token`: "USDT" */
+  token_ticker?: string;
+  /** `token`'s icon, an SVG image the gateway serves */
+  token_icon_url?: string;
   deposit_address: string;
   /** XRP only, and required */
   destination_tag?: number;
