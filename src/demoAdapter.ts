@@ -5,11 +5,11 @@ import type { PayitgoAdapter, PayitgoCheckoutState, PayitgoTokenOption } from '.
 // and QR codes are deliberately invalid, so no wallet can send real money to them.
 
 const RATES: Record<PayitgoTokenId, number> = {
-  USDT_TRC20: 1, TRX: 0.33, ETH: 2600, USDT_ERC20: 1, USDC_ERC20: 1,
-  BNB: 580, USDT_BEP20: 1, USDC_BEP20: 1, BTC: 67000, LTC: 84, DOGE: 0.12, XRP: 1.4,
+  USDT_TRC20: 1, TRX: 0.33, ETH: 2600, USDT_ERC20: 1, USDC_ERC20: 1, DAI_ERC20: 1, SHIB_ERC20: 0.000005, PEPE_ERC20: 0.000004,
+  BNB: 580, USDT_BEP20: 1, USDC_BEP20: 1, ETH_BEP20: 2600, BTC: 67000, LTC: 84, DOGE: 0.12, XRP: 1.4,
 };
-const DECIMALS: Partial<Record<PayitgoTokenId, number>> = { BTC: 8, LTC: 8, DOGE: 4, ETH: 6, BNB: 6 };
-const FEES: Partial<Record<PayitgoTokenId, string>> = { USDT_TRC20: '3.22', ETH: '0.40', USDT_ERC20: '1.20', USDC_ERC20: '1.20', BTC: '0.90', LTC: '0.02', DOGE: '0.05' };
+const DECIMALS: Partial<Record<PayitgoTokenId, number>> = { BTC: 8, LTC: 8, DOGE: 4, ETH: 6, ETH_BEP20: 6, BNB: 6, SHIB_ERC20: 0, PEPE_ERC20: 0 };
+const FEES: Partial<Record<PayitgoTokenId, string>> = { USDT_TRC20: '3.22', ETH: '0.40', USDT_ERC20: '1.20', USDC_ERC20: '1.20', DAI_ERC20: '1.20', SHIB_ERC20: '1.20', PEPE_ERC20: '1.20', BTC: '0.90', LTC: '0.02', DOGE: '0.05' };
 
 const CHOOSE_MS = 60 * 60 * 1000;
 const PAY_MS = 15 * 60 * 1000;
@@ -37,6 +37,7 @@ const options = (usd: number): PayitgoTokenOption[] =>
     token: c.id,
     chain: c.chain,
     name: c.name,
+    ticker: c.symbol,
     network: c.network,
     confirmations: c.confirmations,
     min_usd: '1',
@@ -142,6 +143,7 @@ export const demoAdapter: PayitgoAdapter = {
       previous_coins: previous,
       network: `${coin.network} (demo)`,
       token_name: coin.name,
+      token_ticker: coin.symbol,
       deposit_address: address,
       destination_tag: tag,
       qr_payload: `payitgo-demo:${token}?amount=${amount}${tag ? `&dt=${tag}` : ''}`,

@@ -183,6 +183,8 @@ Without `subscribe`, the widget polls `get()` every `pollIntervalMs`.
 
 The widget adds one `<style>` element to the page the first time it opens. A policy that limits `style-src`
 must allow inline styles (`'unsafe-inline'`), and `connect-src` must allow the gateway (`https:` and `wss:`).
+`img-src` should allow it too: the coin icons are the gateway's (`icon_url`). A blocked icon falls back to the
+one the widget draws itself.
 
 ## Developing this package
 

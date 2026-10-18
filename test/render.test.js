@@ -46,7 +46,7 @@ test('the package exports the widget, the adapters and the coins', () => {
   for (const name of ['PayitgoCheckout', 'PayitgoButton', 'payitgoCheckout', 'PayitgoError', 'demoAdapter', 'coinFor']) {
     assert.equal(typeof pkg[name], name === 'demoAdapter' ? 'object' : 'function', name);
   }
-  assert.equal(pkg.COINS.length, 12);
+  assert.equal(pkg.COINS.length, 16);
   assert.equal(pkg.CHAIN_NAMES.xrp, 'XRP Ledger');
 });
 
@@ -84,6 +84,32 @@ test('with the fees passed on, the coins are listed cheapest first, each at its 
   assert.ok(at('BNB Smart Chain (BEP-20)') < at('Bitcoin') && at('Bitcoin') < at('Tron (TRC-20)'));
   assert.match(html, /\$46\.42 with fees/);
   assert.equal(buttons(html)['Pay $40.34'], true);
+});
+
+test('the gateway names and draws a coin; one it does not describe is drawn from the bundled list', () => {
+  const shib = {
+    ...base, token: 'SHIB_ERC20', chain: 'ethereum', network: 'Ethereum (ERC-20)', token_ticker: 'SHIB',
+    token_icon_url: 'https://api.payitgo.co/coins/SHIB_ERC20.svg', deposit_address: '0x1111111111111111111111111111111111111111',
+    qr_payload: '0x1111111111111111111111111111111111111111', crypto_amount: '10040160.642570281124497992', confirmations_required: 12,
+  };
+  const html = render(PayScreen, { state: shib, remainingMs: 600_000, titleId: 't' });
+  assert.match(html, /<img alt="" src="https:\/\/api\.payitgo\.co\/coins\/SHIB_ERC20\.svg"/);
+  assert.match(html, /10040160\.642570281124497992 SHIB/);
+  assert.match(html, /Send only <strong>SHIB<\/strong> on <strong>Ethereum \(ERC-20\)<\/strong>/);
+  // A coin newer than this package, named by the gateway alone
+  const newer = { ...shib, token: 'NEW_ERC20', token_ticker: 'NEWT', token_icon_url: 'https://api.payitgo.co/coins/NEW_ERC20.svg' };
+  assert.match(render(PayScreen, { state: newer, remainingMs: 600_000, titleId: 't' }), /Send NEWT/);
+  // An older gateway's payment, without them: the bundled list
+  const plain = render(PayScreen, { state: usdt, remainingMs: 600_000, titleId: 't' });
+  assert.doesNotMatch(plain, /<img/);
+  assert.match(plain, /Send USDT/);
+  const options = [{ ...choosing.token_options[1], name: 'Tether', ticker: 'USDT', icon_url: 'https://api.payitgo.co/coins/USDT_BEP20.svg' }];
+  const select = render(SelectScreen, {
+    payment: { title: 'Order #42', amount: { value: 40, currency: 'USD' } }, state: { ...choosing, token_options: options }, selected: '',
+    onSelect() {}, onCancel() {}, onPay() {}, busy: false, error: '', remainingMs: 3_000_000, titleId: 't',
+  });
+  assert.match(select, /src="https:\/\/api\.payitgo\.co\/coins\/USDT_BEP20\.svg"/);
+  assert.match(select, /Tether <span class="payitgo-muted" style="font-weight:400">USDT<\/span>/);
 });
 
 test('a chosen coin offers "Change coin" exactly while payitgo still offers the coins', () => {

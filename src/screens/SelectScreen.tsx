@@ -61,7 +61,7 @@ export function SelectScreen({ payment, state, changing, selected, onSelect, onC
           <div className="payitgo-label">{perCoin ? 'Price' : 'Amount'}</div>
           <div className="payitgo-amount">{price || formatUsd(perCoin ? state.usd_amount : state.amount_due_usd)}</div>
           {perCoin
-            ? <div className="payitgo-muted">{current?.amount_due_usd ? `You pay ≈ ${formatUsd(current.amount_due_usd)} with fees in ${coinFor(current.token).symbol}` : 'Plus network and service fees, by coin'}</div>
+            ? <div className="payitgo-muted">{current?.amount_due_usd ? `You pay ≈ ${formatUsd(current.amount_due_usd)} with fees in ${current.ticker || coinFor(current.token).symbol}` : 'Plus network and service fees, by coin'}</div>
             : price ? <div className="payitgo-muted">≈ {formatUsd(state.amount_due_usd)}</div> : null}
           {payment.lineItem && <div className="payitgo-muted">{payment.lineItem}</div>}
         </div>
@@ -93,9 +93,9 @@ export function SelectScreen({ payment, state, changing, selected, onSelect, onC
                   className="payitgo-option"
                   onClick={() => onSelect(o.token)}
                 >
-                  <CoinIcon token={o.token} />
+                  <CoinIcon token={o.token} iconUrl={o.icon_url} />
                   <span style={{ minWidth: 0 }}>
-                    <span className="payitgo-option-name">{o.name ?? c.name} <span className="payitgo-muted" style={{ fontWeight: 400 }}>{c.symbol}</span></span>
+                    <span className="payitgo-option-name">{o.name ?? c.name} <span className="payitgo-muted" style={{ fontWeight: 400 }}>{o.ticker || c.symbol}</span></span>
                     <span className="payitgo-option-sub">{o.network || c.network || CHAIN_NAMES[o.chain]}</span>
                     <span className="payitgo-option-sub" style={{ fontWeight: 600, color: 'var(--payitgo-text)' }}>
                       {formatUsd(o.amount_due_usd || state.amount_due_usd)}{o.amount_due_usd ? ' with fees' : ''}
@@ -113,8 +113,8 @@ export function SelectScreen({ payment, state, changing, selected, onSelect, onC
       {current ? (
         <p className="payitgo-note">
           {keeping
-            ? `You keep paying in ${coinFor(current.token).symbol}, at the same address.`
-            : `You will pay in ${coinFor(current.token).symbol} on ${current.network || coinFor(current.token).network || CHAIN_NAMES[current.chain]}${changing ? ' instead, at a new address' : ''}. The price is then locked for 15 minutes.`}
+            ? `You keep paying in ${current.ticker || coinFor(current.token).symbol}, at the same address.`
+            : `You will pay in ${current.ticker || coinFor(current.token).symbol} on ${current.network || coinFor(current.token).network || CHAIN_NAMES[current.chain]}${changing ? ' instead, at a new address' : ''}. The price is then locked for 15 minutes.`}
         </p>
       ) : null}
       {error && <p className="payitgo-error" role="alert">{error}</p>}
