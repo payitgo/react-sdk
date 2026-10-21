@@ -123,7 +123,7 @@ const adapter = payitgoCheckout({
 Every route the widget calls (`GET /checkout/{token}`, `POST /checkout/{token}/token`,
 `POST /checkout/{token}/simulate` and `/socket.io/`) answers any origin (`Access-Control-Allow-Origin: *`), so
 the widget calls the gateway directly from your page: no proxy is needed. If you put one in front of it anyway
-(`baseUrl: 'https://shop.example/payitgo'`), it must forward WebSocket upgrades on `/payitgo/socket.io/`: a
+(`baseUrl: 'https://yourdomain.com/payitgo'`), it must forward WebSocket upgrades on `/payitgo/socket.io/`: a
 plain HTTP rewrite cannot carry the WebSocket.
 
 ### Test payments: simulate an outcome
