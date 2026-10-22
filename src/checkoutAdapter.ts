@@ -3,12 +3,12 @@ import { io } from 'socket.io-client';
 import type { PayitgoTokenId } from './coins.js';
 import type { PayitgoAdapter, PayitgoCheckoutState, PayitgoPayment, PayitgoSimulateOutcome } from './types.js';
 
-/** The gateway the widget calls unless `baseUrl` says otherwise: the address the package was released with */
+/** payitgo's API, which the widget calls unless `baseUrl` says otherwise */
 const DEFAULT_BASE_URL = 'https://api.payitgo.co';
 
 export interface PayitgoCheckoutOptions {
   /**
-   * The payitgo gateway's address, e.g. "https://api.payitgo.co" (the default). Only its public checkout
+   * payitgo's API, "https://api.payitgo.co" by default: not your server. Only its public checkout
    * routes and its socket.io server are called, and they answer any origin. A proxy in front of it must also
    * forward WebSocket upgrades on `{baseUrl}/socket.io/`.
    */
