@@ -67,13 +67,13 @@ app.post('/orders/:id/payitgo', async (req, res) => {
 Creating it again for the same `order_id` while it is open returns the same payment, so reopening the widget
 shows the same address and amount.
 
-`baseUrl` is the gateway's address, `https://api.payitgo.co` unless you pass another:
-`payitgoCheckout({ baseUrl, createPayment })`.
+`createPayment` is the widget's only call to your server. Everything else it asks payitgo directly, at
+`https://api.payitgo.co` (the adapter's `baseUrl`, which you leave out), with no key.
 
 ### No server: a payment link
 
-A [payment link](https://api.payitgo.co/docs/checkout#payment-links-in-email-or-chat) needs no key to pay, so
-a page with no server of its own can start its payment from the browser:
+A payment link, made in the dashboard, needs no key to pay, so a page with no server of its own can start its
+payment from the browser with `POST /links/{id}/checkout`, `{id}` being the link's id:
 
 ```ts
 const adapter = payitgoCheckout({
@@ -88,10 +88,11 @@ const adapter = payitgoCheckout({
 
 ### What the widget does
 
-1. When it opens, it calls `createPayment()` once and reads `GET {baseUrl}/checkout/{checkout_token}`.
+1. When it opens, it calls `createPayment()` once and reads the payment from payitgo:
+   `GET https://api.payitgo.co/checkout/{checkout_token}`.
 2. If the payment has no coin yet, it lists the payment's `token_options` (each with its price and
    `fee_note`; when you pass the fees on, each with its own `amount_due_usd`, cheapest first) and posts the
-   customer's choice to `POST {baseUrl}/checkout/{checkout_token}/token`. If that coin is no longer offered,
+   customer's choice to `POST /checkout/{checkout_token}/token`. If that coin is no longer offered,
    it reloads the payment and asks again; if the time to choose has passed ("this payment can no longer be
    paid"), it shows the expired view. While the chosen coin can still change (the payment still has
    `token_options`: nothing has arrived, three changes at most), the pay screen has a **Change coin** button
@@ -104,7 +105,7 @@ const adapter = payitgoCheckout({
    "Price €45.50 · you pay ≈ $50.40" when the fees are passed on. Every transfer in `deposits[]` is listed
    with its own confirmations, and marked "Not counted" (another coin) or "Late" (after the deadline).
 4. It follows the payment **live** over socket.io: it connects to the gateway's default namespace at
-   `{baseUrl}/socket.io/` (WebSocket, falling back to long-polling on the same path where WebSockets are
+   `https://api.payitgo.co/socket.io/` (WebSocket, falling back to long-polling on the same path where WebSockets are
    blocked), emits `subscribe` with the checkout token on every connection and renders the whole payment
    carried by each `payment:update`: `pending`, `partially_paid` (what arrived and what is still missing),
    `detecting` (confirmations), `confirmed`, `expired`, `underpaid`, `failed`. It keeps listening after
@@ -122,15 +123,13 @@ const adapter = payitgoCheckout({
 
 Every route the widget calls (`GET /checkout/{token}`, `POST /checkout/{token}/token`,
 `POST /checkout/{token}/simulate` and `/socket.io/`) answers any origin (`Access-Control-Allow-Origin: *`), so
-the widget calls the gateway directly from your page: no proxy is needed. If you put one in front of it anyway
-(`baseUrl: 'https://yourdomain.com/payitgo'`), it must forward WebSocket upgrades on `/payitgo/socket.io/`: a
-plain HTTP rewrite cannot carry the WebSocket.
+the widget calls payitgo directly from your page: no proxy is needed.
 
 ### Test payments: simulate an outcome
 
 A test payment (created with a test key) moves no coins: nothing watches its address. For those
 the widget shows simulate buttons under the "Test payment" banner, never on a live payment. Each plays what
-the customer does through the real processing (`POST {baseUrl}/checkout/{checkout_token}/simulate`), and the
+the customer does through the real processing (`POST /checkout/{checkout_token}/simulate`), and the
 result arrives on the socket like real coins would, your webhooks included:
 
 | Button | Outcome |
@@ -163,7 +162,7 @@ The buttons are disabled while a simulation runs and once the payment is confirm
 | `returnLinks` | `boolean` (default `false`) | Show the payment's `success_url` ("Back to the shop" once paid) and `cancel_url` (when it expires, is underpaid or fails) as links. Off by default: the widget usually sits on the shop's own page, where closing it is the way back |
 
 `payitgoCheckout(options)`: `createPayment(payment) => Promise<checkout_token>`, and optionally `baseUrl`
-(default `https://api.payitgo.co`), `pollIntervalMs` (default 4000; used only while the live connection is
+(payitgo's API, not your server; default `https://api.payitgo.co`), `pollIntervalMs` (default 4000; used only while the live connection is
 down) and `fetch`. Its errors are `PayitgoError`s, with the API's message and HTTP `status` (0 when the gateway
 could not be reached).
 
@@ -182,9 +181,9 @@ Without `subscribe`, the widget polls `get()` every `pollIntervalMs`.
 ### Content Security Policy
 
 The widget adds one `<style>` element to the page the first time it opens. A policy that limits `style-src`
-must allow inline styles (`'unsafe-inline'`), and `connect-src` must allow the gateway (`https:` and `wss:`).
-`img-src` should allow it too: the coin icons are the gateway's (`icon_url`). A blocked icon falls back to the
-one the widget draws itself.
+must allow inline styles (`'unsafe-inline'`), and `connect-src` must allow `https://api.payitgo.co` and
+`wss://api.payitgo.co`. `img-src` should allow `https://api.payitgo.co` too: the coin icons (`icon_url`) are
+served from it. A blocked icon falls back to the one the widget draws itself.
 
 ## Developing this package
 
