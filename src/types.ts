@@ -51,7 +51,7 @@ export interface PayitgoTokenOption {
 
 /** A test payment's simulated outcome: what the "customer" does (no coins move) */
 export type PayitgoSimulateOutcome =
-  | 'confirmed' | 'overpaid' | 'partially_paid' | 'underpaid' | 'expired' | 'failed' | 'wrong_asset' | 'paid_late';
+  | 'confirmed' | 'overpaid' | 'partially_paid' | 'underpaid' | 'expired' | 'failed' | 'wrong_asset' | 'paid_late' | 'paid_twice';
 
 /** Test payments only, once an outcome was asked for */
 export interface PayitgoSimulation {

@@ -12,6 +12,7 @@ const OUTCOMES: { outcome: PayitgoSimulateOutcome; label: string; hint: string }
   { outcome: 'failed', label: 'Drop the transaction', hint: 'The amount arrives, then its transaction is dropped' },
   { outcome: 'wrong_asset', label: 'Pay in another coin', hint: 'The amount arrives in another coin on the same network' },
   { outcome: 'paid_late', label: 'Pay late', hint: 'Half arrives, the deadline passes, then the rest' },
+  { outcome: 'paid_twice', label: 'Pay twice', hint: 'Paid in full, then the same again after it confirmed' },
 ];
 const labelOf = (o: string) => OUTCOMES.find(x => x.outcome === o)?.label ?? o;
 /** These addresses only receive their own coin */
