@@ -138,7 +138,7 @@ result arrives on the socket like real coins would, your webhooks included:
 | Overpay | `confirmed` with `overpaid: true` |
 | Pay half | `partially_paid`; the payment stays open |
 | Underpay | `partially_paid`, then `underpaid` |
-| Let it expire | `expired` (the only one before a coin is chosen) |
+| Let it expire | `expired`, at once even before a coin is chosen (the other buttons then wait for the coin, except Pay in another coin) |
 | Drop the transaction | `detecting`, then `failed` |
 | Pay in another coin | a deposit in another coin (not on Bitcoin, Litecoin, Dogecoin or XRP) |
 | Pay late | `partially_paid`, `underpaid`, then `confirmed` with `paid_late: true` |
