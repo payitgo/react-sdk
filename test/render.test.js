@@ -130,12 +130,18 @@ test('a chosen coin offers "Change coin" exactly while payitgo still offers the 
   assert.equal(buttons(picker('BTC'))['Pay $40.54'], true);
 });
 
-test('the simulate buttons: never on a live payment, only "Let it expire" before the coin, no other coin on Bitcoin', () => {
+test('the simulate buttons: never on a live payment, all but another coin before the coin (they wait for it), no other coin on Bitcoin', () => {
   const props = (state) => ({ state, simulate: async () => state, onState() {}, onReload() {} });
   assert.equal(render(SimulatePanel, props({ ...usdt, livemode: true })), '');
 
-  let b = buttons(render(SimulatePanel, props(choosing)));
-  assert.deepEqual(Object.keys(b).filter((k) => b[k]), ['Let it expire']);
+  const before = render(SimulatePanel, props(choosing));
+  let b = buttons(before);
+  assert.deepEqual(Object.keys(b).filter((k) => !b[k]), ['Pay in another coin']);
+  assert.match(before, /No coin chosen yet/);
+  // Asked for already: it says so instead
+  const requested = render(SimulatePanel, props({ ...choosing, simulation: { outcome: 'confirmed', state: 'requested' } }));
+  assert.match(requested, /once a coin is chosen/);
+  assert.doesNotMatch(requested, /No coin chosen yet/);
 
   b = buttons(render(SimulatePanel, props({ ...usdt, chain: 'bitcoin', token: 'BTC' })));
   assert.equal(b['Pay in another coin'], false);
