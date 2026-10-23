@@ -38,8 +38,9 @@ export function SimulatePanel({ state, simulate, onState, onReload }: Props) {
   const open = state.status === 'pending' || state.status === 'partially_paid';
   const enabled = (o: PayitgoSimulateOutcome) => {
     if (!open || running || busy) return false;
-    if (!state.token) return o === 'expired';
-    return !(o === 'wrong_asset' && SINGLE_ASSET.has(state.chain));
+    // Before the coin, an outcome waits for it; another coin arriving depends on the coin's network
+    if (o === 'wrong_asset') return !!state.token && !SINGLE_ASSET.has(state.chain);
+    return true;
   };
 
   const run = async (outcome: PayitgoSimulateOutcome) => {
@@ -77,7 +78,9 @@ export function SimulatePanel({ state, simulate, onState, onReload }: Props) {
           </button>
         ))}
       </div>
-      {!state.token && open && <div className="payitgo-sim-note">Choose a coin to simulate a payment. Only &ldquo;Let it expire&rdquo; works before that.</div>}
+      {!state.token && open && sim?.state !== 'requested' && (
+        <div className="payitgo-sim-note">No coin chosen yet: pick an outcome, then choose a coin and it plays.</div>
+      )}
       {error && <div className="payitgo-sim-note payitgo-sim-error" role="alert">{error}</div>}
     </div>
   );
