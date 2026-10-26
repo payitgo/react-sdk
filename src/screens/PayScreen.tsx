@@ -28,8 +28,8 @@ interface Props {
 export function PayScreen({ state, remainingMs, onChangeCoin, notice, onSimulate, titleId }: Props) {
   const ticker = tickerOf(state);
   const network = networkOf(state);
-  const partial = state.status === 'partially_paid' && isPositive(state.received_amount);
-  const toSend = partial ? subtractDecimal(state.crypto_amount, state.received_amount) : state.crypto_amount;
+  const partial = state.status === 'partially_paid' && isPositive(state.crypto_received);
+  const toSend = partial ? subtractDecimal(state.crypto_amount, state.crypto_received) : state.crypto_amount;
   const timeUp = remainingMs <= 0;
   const [simulated, setSimulated] = useState(false);
   const hasTag = state.destination_tag !== undefined && state.destination_tag !== null;
@@ -45,7 +45,7 @@ export function PayScreen({ state, remainingMs, onChangeCoin, notice, onSimulate
 
       {partial ? (
         <div className="payitgo-info" role="status">
-          We received <strong>{state.received_amount} of {state.crypto_amount} {ticker}</strong>. Send the remaining{' '}
+          We received <strong>{state.crypto_received} of {state.crypto_amount} {ticker}</strong>. Send the remaining{' '}
           <strong>{toSend} {ticker}</strong> to the same address before the time runs out.
         </div>
       ) : (
@@ -68,7 +68,7 @@ export function PayScreen({ state, remainingMs, onChangeCoin, notice, onSimulate
             <div style={{ minWidth: 0 }}>
               <div className="payitgo-amount" style={{ margin: 0, fontSize: 22, wordBreak: 'break-all' }}>{toSend} {ticker}</div>
               <div style={{ fontSize: 13, fontWeight: 600 }}>on {network}</div>
-              <div className="payitgo-muted" style={{ fontSize: 12 }}>{dueLine(state, state.amount_due_usd)}{partial ? ' in total' : ''}</div>
+              <div className="payitgo-muted" style={{ fontSize: 12 }}>{dueLine(state, state.amount_due)}{partial ? ' in total' : ''}</div>
             </div>
           </div>
           <CopyField label={`${ticker} address`} value={state.deposit_address} />

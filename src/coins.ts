@@ -74,21 +74,23 @@ export function coinFor(id: string): PayitgoCoin {
 /** What people call the payment's coin: the API's `token_ticker`, else this list's */
 export const tickerOf = (s: { token: string; token_ticker?: string }) => s.token_ticker || coinFor(s.token).symbol;
 
-export const formatUsd = (v: number | string) => {
-  const n = typeof v === 'number' ? v : parseFloat(v);
-  return (Number.isFinite(n) ? n : 0).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
-};
-
 /**
- * The merchant's own price, when the payment was priced in another currency ("€45.50"; display only).
- * "" when there is none; an unknown code falls back to "45.50 XYZ"
+ * An amount in the payment's currency, as people write it: "$12.50" for US dollars, "45.50 EUR" for another
+ * currency (its own decimals, the code after it), "0.5 ETH" for a payment link priced in a coin (the amount as
+ * the gateway gives it, in the coin's decimals). USD when no currency is given; never throws
  */
-export const formatPrice = (amount: string | undefined, currency: string | undefined) => {
-  if (!amount || !currency) return '';
+export const formatMoney = (amount: number | string | undefined, currency?: string): string => {
+  const code = (currency || 'USD').toUpperCase();
+  const n = typeof amount === 'number' ? amount : parseFloat(amount ?? '');
+  const value = Number.isFinite(n) ? n : 0;
+  const given = typeof amount === 'string' && amount.trim() ? amount.trim() : String(value);
+  if (code === 'USD') return value.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+  // A coin: never a currency Intl knows, and its decimals are the gateway's
+  if (byId.has(code) || code.includes('_')) return `${given} ${coinFor(code).symbol}`;
   try {
-    return new Intl.NumberFormat(undefined, { style: 'currency', currency: currency.toUpperCase() }).format(Number(amount));
+    return `${new Intl.NumberFormat('en-US', { style: 'currency', currency: code, currencyDisplay: 'code' }).format(value).replace(code, '').trim()} ${code}`;
   } catch {
-    return `${amount} ${currency.toUpperCase()}`;
+    return `${given} ${code}`;
   }
 };
 

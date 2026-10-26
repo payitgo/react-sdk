@@ -1,6 +1,6 @@
 'use client';
 import { useRef } from 'react';
-import { CHAIN_NAMES, coinFor, formatPrice, formatUsd, mmss, type PayitgoTokenId } from '../coins.js';
+import { CHAIN_NAMES, coinFor, formatMoney, mmss, type PayitgoTokenId } from '../coins.js';
 import { CoinIcon } from '../CoinIcon.js';
 import { CheckIcon } from '../icons.js';
 import { sortOptions } from '../price.js';
@@ -25,13 +25,14 @@ interface Props {
 /** Order header plus the payment's token_options. Paying posts the chosen coin. */
 export function SelectScreen({ payment, state, changing, selected, onSelect, onCancel, onPay, busy, error, remainingMs, titleId }: Props) {
   const optionRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  // Cheapest network first when the fees are passed on (each option then has its own amount_due_usd)
+  // Cheapest network first when the fees are passed on (each option then has its own amount_due)
   const options = sortOptions(state.token_options);
   const current = options.find(o => o.token === selected);
-  // Without a per-option total every option costs the payment's amount_due_usd
-  const due = current?.amount_due_usd || state.amount_due_usd;
-  const price = formatPrice(state.price_amount, state.price_currency);
-  // Fees passed on: until a coin is chosen the top-level amount_due_usd is only the price
+  // Without a per-option total every option costs the payment's amount_due
+  const due = current?.amount_due || state.amount_due;
+  // Every figure is in the payment's own currency
+  const money = (v: string) => formatMoney(v, state.currency);
+  // Fees passed on: until a coin is chosen the top-level amount_due is only the price
   const perCoin = !!state.fees_paid_by_customer;
   const timeUp = remainingMs <= 0;
   const keeping = changing && selected === state.token;
@@ -59,10 +60,8 @@ export function SelectScreen({ payment, state, changing, selected, onSelect, onC
       <div className="payitgo-amount-card">
         <div>
           <div className="payitgo-label">{perCoin ? 'Price' : 'Amount'}</div>
-          <div className="payitgo-amount">{price || formatUsd(perCoin ? state.usd_amount : state.amount_due_usd)}</div>
-          {perCoin
-            ? <div className="payitgo-muted">{current?.amount_due_usd ? `You pay ≈ ${formatUsd(current.amount_due_usd)} with fees in ${current.ticker || coinFor(current.token).symbol}` : 'Plus network and service fees, by coin'}</div>
-            : price ? <div className="payitgo-muted">≈ {formatUsd(state.amount_due_usd)}</div> : null}
+          <div className="payitgo-amount">{money(perCoin ? state.amount : state.amount_due)}</div>
+          {perCoin && <div className="payitgo-muted">{current?.amount_due ? `You pay ≈ ${money(current.amount_due)} with fees in ${current.ticker || coinFor(current.token).symbol}` : 'Plus network and service fees, by coin'}</div>}
           {payment.lineItem && <div className="payitgo-muted">{payment.lineItem}</div>}
         </div>
         <div className="payitgo-meta">
@@ -98,7 +97,7 @@ export function SelectScreen({ payment, state, changing, selected, onSelect, onC
                     <span className="payitgo-option-name">{o.name ?? c.name} <span className="payitgo-muted" style={{ fontWeight: 400 }}>{o.ticker || c.symbol}</span></span>
                     <span className="payitgo-option-sub">{o.network || c.network || CHAIN_NAMES[o.chain]}</span>
                     <span className="payitgo-option-sub" style={{ fontWeight: 600, color: 'var(--payitgo-text)' }}>
-                      {formatUsd(o.amount_due_usd || state.amount_due_usd)}{o.amount_due_usd ? ' with fees' : ''}
+                      {money(o.amount_due || state.amount_due)}{o.amount_due ? ' with fees' : ''}
                     </span>
                     {o.fee_note && <span className="payitgo-option-sub">{o.fee_note}</span>}
                   </span>
@@ -122,7 +121,7 @@ export function SelectScreen({ payment, state, changing, selected, onSelect, onC
       <div className="payitgo-footer">
         <button type="button" className="payitgo-btn payitgo-btn-secondary" onClick={onCancel}>{changing ? 'Back' : 'Not now'}</button>
         <button type="button" className="payitgo-btn payitgo-btn-primary" onClick={onPay} disabled={busy || !options.length}>
-          {busy ? 'Preparing…' : keeping ? 'Keep this coin' : `Pay ${formatUsd(due)}`}
+          {busy ? 'Preparing…' : keeping ? 'Keep this coin' : `Pay ${money(due)}`}
         </button>
       </div>
     </>

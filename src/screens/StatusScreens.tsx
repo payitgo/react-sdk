@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { coinFor, formatPrice, formatUsd, isPositive, tickerOf } from '../coins.js';
+import { coinFor, formatMoney, isPositive, tickerOf } from '../coins.js';
 import { CopyField } from '../CopyField.js';
 import { AlertIcon, CheckIcon, ClockIcon, SpinnerIcon } from '../icons.js';
 import type { PayitgoCheckoutState, PayitgoPayment } from '../types.js';
@@ -27,7 +27,7 @@ export function LoadingScreen({ payment, titleId }: { payment: PayitgoPayment; t
       <div className="payitgo-status">
         <span className="payitgo-status-icon"><SpinnerIcon /></span>
         <h2 id={titleId}>{payment.title}</h2>
-        <p>Preparing your payment of {formatUsd(payment.amount.value)}…</p>
+        <p>Preparing your payment of {formatMoney(payment.amount.value, payment.amount.currency)}…</p>
       </div>
     </div>
   );
@@ -71,14 +71,12 @@ function ShopLink({ href, primary, children }: { href?: string; primary?: boolea
 
 export function PaidScreen({ payment, state, onDone, returnLinks, titleId }: { payment: PayitgoPayment; state: PayitgoCheckoutState; onDone: () => void; returnLinks?: boolean; titleId: string }) {
   const ticker = tickerOf(state);
-  const paid = state.received_amount && state.received_amount !== '0' ? state.received_amount : state.crypto_amount;
-  const price = formatPrice(state.price_amount, state.price_currency);
+  const paid = state.crypto_received && state.crypto_received !== '0' ? state.crypto_received : state.crypto_amount;
   const rows: [string, string][] = [
     ['For', payment.lineItem ?? payment.title],
     ['Amount paid', `${paid} ${ticker}`],
-    // received_usd: the dollar value of what counts; amount_due_usd only as a fallback
-    ['Value', formatUsd(isPositive(state.received_usd) ? state.received_usd! : state.amount_due_usd)],
-    ...(price ? [['Price', price] as [string, string]] : []),
+    // amount_received: what counts, in the payment's currency; amount_due only as a fallback
+    ['Value', formatMoney(isPositive(state.amount_received) ? state.amount_received! : state.amount_due, state.currency)],
     ['Network', networkOf(state)],
   ];
   const success = returnLinks ? state.success_url : undefined;
@@ -165,7 +163,7 @@ export function UnderpaidScreen({ state, onClose, returnLinks, titleId }: Closed
         <span className="payitgo-status-icon payitgo-warn"><AlertIcon /></span>
         <h2 id={titleId}>Only part of the amount arrived</h2>
         <p>
-          Only {state.received_amount} of {state.crypto_amount} {ticker} arrived before the deadline. Please contact the merchant
+          Only {state.crypto_received} of {state.crypto_amount} {ticker} arrived before the deadline. Please contact the merchant
           (order {state.order_id}): they have received what you sent and can refund it or agree on the rest.
         </p>
         <p style={{ marginTop: 8, fontSize: 12 }}>

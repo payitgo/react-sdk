@@ -192,7 +192,7 @@ function CheckoutDialog({ onClose, payment, theme, adapter = demoAdapter, onSucc
       paymentId: state.id,
       status: 'confirmed',
       token: state.token,
-      amount: state.received_amount && state.received_amount !== '0' ? state.received_amount : state.crypto_amount,
+      amount: state.crypto_received && state.crypto_received !== '0' ? state.crypto_received : state.crypto_amount,
       txId: state.tx_id,
     });
   }, [state]);

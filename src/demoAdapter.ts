@@ -40,8 +40,8 @@ const options = (usd: number): PayitgoTokenOption[] =>
     ticker: c.symbol,
     network: c.network,
     confirmations: c.confirmations,
-    min_usd: '1',
-    network_fee_usd: FEES[c.id] ?? '0.01',
+    minimum: '1',
+    network_fee: FEES[c.id] ?? '0.01',
     // fee_note says how long a payment takes; a demo payment confirms in seconds
     fee_note: 'Demo: final in seconds.',
   })).filter(() => usd >= 1);
@@ -61,7 +61,7 @@ function advance(s: DemoSession): PayitgoCheckoutState {
         // Paid: the coin no longer changes
         token_options: undefined,
         status: confirmations >= required ? 'confirmed' : 'detecting',
-        received_amount: st.crypto_amount,
+        crypto_received: st.crypto_amount,
         confirmations,
         tx_id: st.tx_id ?? (st.chain === 'ethereum' || st.chain === 'bsc' ? `0x${randomHex(64)}` : randomHex(64)),
       };
@@ -99,9 +99,11 @@ export const demoAdapter: PayitgoAdapter = {
         deposit_address: '',
         qr_payload: '',
         crypto_amount: '0',
-        received_amount: '0',
-        usd_amount: String(usd),
-        amount_due_usd: String(usd),
+        crypto_received: '0',
+        // The demo prices coins as the dollar rates above, whatever currency the host names
+        currency: (payment.amount.currency || 'USD').toUpperCase(),
+        amount: String(usd),
+        amount_due: String(usd),
         expires_at: new Date(now + CHOOSE_MS).toISOString(),
         network_fee_note: '',
         confirmations: 0,
@@ -124,7 +126,7 @@ export const demoAdapter: PayitgoAdapter = {
     // The coin it has, or one that can no longer change (paid, expired): the payment as it is
     if (st.token === token || (st.token && !st.token_options)) return st;
     const coin = coinFor(token);
-    const usd = Number(st.usd_amount);
+    const usd = Number(st.amount);
     const amount = cryptoFor(token, usd);
     const address = `DEMO-${coin.chain.toUpperCase()}-ADDRESS-${randomHex(6).toUpperCase()}-DO-NOT-PAY`;
     const tag = token === 'XRP' ? Math.floor(Math.random() * 90000) + 10000 : undefined;
