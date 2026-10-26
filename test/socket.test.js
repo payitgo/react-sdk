@@ -42,7 +42,7 @@ async function until(check) {
   assert.ok(check(), 'timed out');
 }
 
-const pending = { id: 'p1', order_id: 'ORD-1', status: 'pending', token: 'USDT_TRC20', crypto_amount: '20', received_amount: '0' };
+const pending = { id: 'p1', order_id: 'ORD-1', status: 'pending', token: 'USDT_TRC20', crypto_amount: '20', crypto_received: '0' };
 const createPayment = async () => 'tok1';
 
 for (const [name, path, suffix] of [
@@ -63,7 +63,7 @@ for (const [name, path, suffix] of [
     t.after(stop);
 
     await until(() => connection.includes(true) && events.some((e) => e.type === 'payment.snapshot'));
-    gw.io.to('p1').emit('payment:update', { type: 'payment.detecting', payment: { ...pending, status: 'detecting', received_amount: '20' } });
+    gw.io.to('p1').emit('payment:update', { type: 'payment.detecting', payment: { ...pending, status: 'detecting', crypto_received: '20' } });
     await until(() => events.some((e) => e.type === 'payment.detecting'));
     assert.deepEqual(events.at(-1), { type: 'payment.detecting', status: 'detecting' });
 

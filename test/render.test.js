@@ -4,19 +4,19 @@ import { createElement as h } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 
 import * as pkg from '@payitgo/react';
-import { subtractDecimal, formatPrice } from '../dist/coins.js';
+import { subtractDecimal, formatMoney } from '../dist/coins.js';
 import { sortOptions } from '../dist/price.js';
 import { PayScreen } from '../dist/screens/PayScreen.js';
 import { SelectScreen } from '../dist/screens/SelectScreen.js';
 import { SimulatePanel } from '../dist/screens/SimulatePanel.js';
-import { ExpiredScreen, UnderpaidScreen } from '../dist/screens/StatusScreens.js';
+import { ExpiredScreen, LoadingScreen, PaidScreen, UnderpaidScreen } from '../dist/screens/StatusScreens.js';
 
 const inTen = () => new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
 // Payments as GET /checkout/{token} returns them (the fields the widget reads).
 const base = {
   id: '8f3a2c1e9b7d4a6f05e1c2d3', order_id: 'ORD-1001', status: 'pending', livemode: false,
-  received_amount: '0', usd_amount: '49.9', amount_due_usd: '49.9', fees_paid_by_customer: false,
+  crypto_received: '0', currency: 'USD', amount: '49.9', amount_due: '49.9', fees_paid_by_customer: false,
   network_fee_note: '', confirmations: 0, confirmations_required: 0, deposits: [], expires_at: inTen(),
 };
 const xrp = {
@@ -29,12 +29,12 @@ const usdt = {
   qr_payload: 'TNVfZ8m3qR6xW2pL9kC4hJ7bD5sYt1uAeG', crypto_amount: '49.9', confirmations_required: 20,
 };
 const choosing = {
-  ...base, token: '', chain: '', deposit_address: '', qr_payload: '', crypto_amount: '0', usd_amount: '40',
-  amount_due_usd: '40', fees_paid_by_customer: true,
+  ...base, token: '', chain: '', deposit_address: '', qr_payload: '', crypto_amount: '0', amount: '40',
+  amount_due: '40', fees_paid_by_customer: true,
   token_options: [
-    { token: 'USDT_TRC20', chain: 'tron', network: 'Tron (TRC-20)', min_usd: '1', network_fee_usd: '6.04', amount_due_usd: '46.42', fee_note: 'Final in about a minute.' },
-    { token: 'USDT_BEP20', chain: 'bsc', network: 'BNB Smart Chain (BEP-20)', min_usd: '1', network_fee_usd: '0.01', amount_due_usd: '40.34', fee_note: 'Final in under a minute.' },
-    { token: 'BTC', chain: 'bitcoin', network: 'Bitcoin', min_usd: '10', network_fee_usd: '0.21', amount_due_usd: '40.54', fee_note: 'Final in about 30 minutes (3 confirmations).' },
+    { token: 'USDT_TRC20', chain: 'tron', network: 'Tron (TRC-20)', minimum: '1', network_fee: '6.04', amount_due: '46.42', fee_note: 'Final in about a minute.' },
+    { token: 'USDT_BEP20', chain: 'bsc', network: 'BNB Smart Chain (BEP-20)', minimum: '1', network_fee: '0.01', amount_due: '40.34', fee_note: 'Final in under a minute.' },
+    { token: 'BTC', chain: 'bitcoin', network: 'Bitcoin', minimum: '10', network_fee: '0.21', amount_due: '40.54', fee_note: 'Final in about 30 minutes (3 confirmations).' },
   ],
 };
 
@@ -67,7 +67,7 @@ test('an XRP payment shows its destination tag, marked required, next to the add
 });
 
 test('a partly paid payment asks for the rest, to the same address', () => {
-  const html = render(PayScreen, { state: { ...usdt, status: 'partially_paid', received_amount: '30' }, remainingMs: 600_000, titleId: 't' });
+  const html = render(PayScreen, { state: { ...usdt, status: 'partially_paid', crypto_received: '30' }, remainingMs: 600_000, titleId: 't' });
   assert.match(html, /Send the rest/);
   assert.match(html, /We received <strong>30 of 49\.9 USDT<\/strong>/);
   assert.match(html, /19\.9 USDT/);
@@ -165,7 +165,7 @@ test('an expired payment offers a new one only when nothing can still complete i
 });
 
 test('an underpaid payment says what arrived', () => {
-  const html = render(UnderpaidScreen, { state: { ...usdt, status: 'underpaid', received_amount: '30' }, onClose() {}, titleId: 't' });
+  const html = render(UnderpaidScreen, { state: { ...usdt, status: 'underpaid', crypto_received: '30' }, onClose() {}, titleId: 't' });
   assert.match(html, /Only 30 of 49\.9 USDT arrived/);
   assert.match(html, /ORD-1001/);
 });
@@ -175,6 +175,41 @@ test('amounts are exact decimal strings', () => {
   assert.equal(subtractDecimal('0.00012', '0.00002'), '0.0001');
   assert.equal(subtractDecimal('14.215246', '14.215246'), '0');
   assert.equal(subtractDecimal('1', '2'), '0');
-  assert.match(formatPrice('45.50', 'EUR'), /45\.50/);
-  assert.equal(formatPrice(undefined, undefined), '');
+});
+
+test('money is shown in the payment\'s currency: dollars with a sign, another currency with its code, a coin as given', () => {
+  assert.equal(formatMoney('12.5', 'USD'), '$12.50');
+  assert.equal(formatMoney(49.9, undefined), '$49.90');
+  assert.equal(formatMoney('45.5', 'EUR'), '45.50 EUR');
+  assert.equal(formatMoney('1234.5', 'ngn'), '1,234.50 NGN');
+  assert.equal(formatMoney('0.5', 'ETH'), '0.5 ETH');
+  assert.equal(formatMoney('0.00012345', 'BTC'), '0.00012345 BTC');
+  assert.equal(formatMoney('20', 'USDT_TRC20'), '20 USDT');
+  assert.equal(formatMoney(undefined, 'EUR'), '0.00 EUR');
+});
+
+test('a payment priced in another currency, or in a coin, shows every figure in it and never in dollars', () => {
+  const props = (state, selected) => ({
+    payment: { title: 'Order #42', amount: { value: 40, currency: state.currency } }, state, selected,
+    onSelect() {}, onCancel() {}, onPay() {}, busy: false, error: '', remainingMs: 3_000_000, titleId: 't',
+  });
+  let html = render(SelectScreen, props({ ...choosing, currency: 'EUR' }, 'USDT_BEP20'));
+  assert.match(html, /40\.00 EUR/);
+  assert.match(html, /You pay ≈ 40\.34 EUR with fees in USDT/);
+  assert.match(html, /46\.42 EUR with fees/);
+  assert.equal(buttons(html)['Pay 40.34 EUR'], true);
+  assert.doesNotMatch(html, /\$/);
+  // A payment link priced in a coin: the amount as the gateway gives it, then the coin
+  const ether = { ...choosing, currency: 'ETH', amount: '0.5', amount_due: '0.5', fees_paid_by_customer: false, token_options: choosing.token_options.map((o) => ({ ...o, amount_due: undefined })) };
+  html = render(SelectScreen, props(ether, 'ETH'));
+  assert.match(html, /0\.5 ETH/);
+  assert.equal(buttons(html)['Pay 0.5 ETH'], true);
+  assert.doesNotMatch(html, /\$/);
+  // The pay screen and the paid summary: what the coins are worth, in the payment's currency
+  const euros = { ...usdt, currency: 'EUR', amount: '45.5', amount_due: '45.5' };
+  assert.match(render(PayScreen, { state: euros, remainingMs: 600_000, titleId: 't' }), /≈ 45\.50 EUR/);
+  const paid = render(PaidScreen, { payment: props(euros, '').payment, state: { ...euros, status: 'confirmed', crypto_received: '49.9', amount_received: '45.5' }, onDone() {}, titleId: 't' });
+  assert.match(paid, /45\.50 EUR/);
+  assert.doesNotMatch(paid, /\$/);
+  assert.match(render(LoadingScreen, { payment: { title: 'Order #42', amount: { value: '45.50', currency: 'EUR' } }, titleId: 't' }), /45\.50 EUR/);
 });

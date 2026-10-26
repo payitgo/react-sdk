@@ -59,7 +59,7 @@ const payitgo = new Payitgo(process.env.PAYITGO_KEY!); // your secret key, on th
 app.post('/orders/:id/payitgo', async (req, res) => {
   const order = await orders.get(req.params.id);
   // No token: the customer picks the coin in the widget.
-  const payment = await payitgo.payments.create({ order_id: order.id, amount_usd: order.total });
+  const payment = await payitgo.payments.create({ order_id: order.id, amount: order.total });
   res.json({ checkout_token: payment.checkout_token });
 });
 ```
@@ -91,7 +91,7 @@ const adapter = payitgoCheckout({
 1. When it opens, it calls `createPayment()` once and reads the payment from payitgo:
    `GET https://api.payitgo.co/checkout/{checkout_token}`.
 2. If the payment has no coin yet, it lists the payment's `token_options` (each with its price and
-   `fee_note`; when you pass the fees on, each with its own `amount_due_usd`, cheapest first) and posts the
+   `fee_note`; when you pass the fees on, each with its own `amount_due`, cheapest first) and posts the
    customer's choice to `POST /checkout/{checkout_token}/token`. If that coin is no longer offered,
    it reloads the payment and asks again; if the time to choose has passed ("this payment can no longer be
    paid"), it shows the expired view. While the chosen coin can still change (the payment still has
@@ -100,9 +100,9 @@ const adapter = payitgoCheckout({
 3. It shows the exact amount and network, the QR code (`qr_payload`: the address only, so the amount and
    any XRP destination tag are shown as text to copy), the address, the XRP destination tag (marked
    required) and a countdown to `expires_at`. At zero it shows "Time is up, checking…" and waits for the
-   gateway to close the payment rather than deciding on its own. A payment priced in another currency
-   (`price_amount`, `price_currency`) shows that price next to the dollars: "€45.50 · ≈ $49.23", or
-   "Price €45.50 · you pay ≈ $50.40" when the fees are passed on. Every transfer in `deposits[]` is listed
+   gateway to close the payment rather than deciding on its own. Every amount is in the payment's own
+   `currency`: "$49.90" for US dollars, "45.50 EUR" for another currency, "0.5 ETH" for a payment link priced
+   in a coin. Every transfer in `deposits[]` is listed
    with its own confirmations, and marked "Not counted" (another coin) or "Late" (after the deadline).
 4. It follows the payment **live** over socket.io: it connects to the gateway's default namespace at
    `https://api.payitgo.co/socket.io/` (WebSocket, falling back to long-polling on the same path where WebSockets are
@@ -156,7 +156,7 @@ The buttons are disabled while a simulation runs and once the payment is confirm
 | Prop | Type | |
 |---|---|---|
 | `adapter` | `PayitgoAdapter` | `payitgoCheckout({...})` for real payments; defaults to `demoAdapter` |
-| `payment` | `{ title, amount: { value, currency: 'USD' }, description?, period?, badge?, lineItem?, due? }` | Display text. The amount shown once loaded is the payment's own: `amount_due_usd`, with `price_amount` / `price_currency` beside it when your server priced the payment in another currency |
+| `payment` | `{ title, amount: { value, currency? }, description?, period?, badge?, lineItem?, due? }` | Display text. `amount` shows while the payment loads (`currency`: its ISO 4217 code, USD when left out, or the coin a payment link is priced in); once loaded the widget shows the payment's own `amount_due`, in its `currency` |
 | `theme` | `{ mode?: 'dark' \| 'light', accent?: string }` | |
 | `onSuccess` | `(result: PayitgoResult) => void` | `{ paymentId, status: 'confirmed', token, amount, txId }`; `amount` is a decimal string in `token` |
 | `returnLinks` | `boolean` (default `false`) | Show the payment's `success_url` ("Back to the shop" once paid) and `cancel_url` (when it expires, is underpaid or fails) as links. Off by default: the widget usually sits on the shop's own page, where closing it is the way back |

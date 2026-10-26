@@ -7,8 +7,11 @@ import type { PayitgoChain, PayitgoTokenId } from './coins.js';
  */
 export interface PayitgoPayment {
   title: string;
-  /** The price. Only US dollars are supported as the display currency. */
-  amount: { value: number | string; currency: 'USD' };
+  /**
+   * The price as the widget shows it while the payment loads: `currency` is its ISO 4217 code (USD when left
+   * out) or the coin a payment link is priced in. Once loaded, the payment's own `amount_due` and `currency` show.
+   */
+  amount: { value: number | string; currency?: string };
   /** Line under the title */
   description?: string;
   /** Small pill next to the title, e.g. "October 2026" */
@@ -40,12 +43,16 @@ export interface PayitgoTokenOption {
   /** The coin's icon, an SVG image the gateway serves */
   icon_url?: string;
   confirmations?: number;
-  min_usd: string;
-  network_fee_usd: string;
+  /** The smallest payment accepted in the coin right now, in the payment's `currency` */
+  minimum: string;
+  /** The network fee for moving a payment in the coin right now, in the payment's `currency` */
+  network_fee: string;
   /** For a coin that is converted: the share of the payment the network fee adds on top, in basis points (180: 1.8%) */
   network_fee_bps?: number;
-  /** Present when the merchant passes fees on: what the customer pays in this coin */
-  amount_due_usd?: string;
+  /** Present when the merchant passes fees on: what the customer pays in this coin, in the payment's `currency` */
+  amount_due?: string;
+  /** The part of `amount_due` paid only to reach the exchange's minimum; the merchant receives it */
+  amount_extra?: string;
   fee_note?: string;
 }
 
@@ -121,24 +128,23 @@ export interface PayitgoCheckoutState {
   /** What the customer must send, in `token` */
   crypto_amount: string;
   /** What has arrived so far, in `token` */
-  received_amount: string;
-  /** The merchant's price in dollars */
-  usd_amount: string;
-  /** What the customer pays in dollars: `usd_amount`, or more when the fees are passed on (once a coin is chosen) */
-  amount_due_usd: string;
+  crypto_received: string;
   /**
-   * The merchant's price in its own currency, when it priced the payment in one (display only: the customer
-   * pays in crypto). Absent for a payment priced in dollars
+   * What the payment was priced in: an ISO 4217 code, upper case ("USD" by default), or the coin of a payment
+   * link priced in a coin ("ETH", "USDT_TRC20"). `amount`, `amount_due`, `amount_received` and the options'
+   * figures are in it
    */
-  price_amount?: string;
-  /** ISO 4217 code of `price_amount`, upper case: "EUR" */
-  price_currency?: string;
-  /** Dollars per unit of `price_currency`, fixed at creation. Not needed for display */
-  price_rate?: string;
-  /** The customer pays the network and service fees: each of `token_options` has its own `amount_due_usd` */
+  currency: string;
+  /** The merchant's price, in `currency` */
+  amount: string;
+  /** What the customer pays, in `currency`: `amount`, or more when the fees are passed on (once a coin is chosen) */
+  amount_due: string;
+  /** The customer pays the network and service fees: each of `token_options` has its own `amount_due` */
   fees_paid_by_customer?: boolean;
-  /** Dollar value of what counts so far */
-  received_usd?: string;
+  /** What counts so far, in `currency` */
+  amount_received?: string;
+  /** The part of `amount_due` paid only to reach the exchange's minimum; the merchant receives it */
+  amount_extra?: string;
   expires_at: string;
   network_fee_note: string;
   confirmations: number;
